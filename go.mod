@@ -1,4 +1,4 @@
-module github.com/jameswoolfenden/jwt_token
+module github.com/JamesWoolfenden/jwt_token
 
 go 1.22
 

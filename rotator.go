@@ -9,6 +9,7 @@ import (
 	"github.com/GoogleCloudPlatform/functions-framework-go/functions"
 	"github.com/google/uuid"
 	"hash/crc32"
+	"io"
 	"log"
 	"math/rand"
 	"net/http"
@@ -35,7 +36,8 @@ func main() {
 }
 
 func jwt() error {
-	ProjectID := "122203615305"
+
+	ProjectID := GetProjectID()
 	var myToken token
 
 	myToken.Secret = RandomString(64)
@@ -51,6 +53,7 @@ func jwt() error {
 	secret, err := GetSecret(secretID)
 
 	if err != nil {
+		fmt.Printf(`{"message": "Failed to retrieve secret", "severity": "error"}`)
 		log.Fatalf("failed to retrieve secret %s", secretID)
 	}
 
@@ -66,6 +69,7 @@ func jwt() error {
 	err = addSecretVersion(postSecretID, results)
 
 	if err != nil {
+		fmt.Print(err)
 		fmt.Printf(`{"message": "Failed to update secret", "severity": "error"}`)
 		return err
 	}
@@ -137,4 +141,25 @@ func addSecretVersion(secret string, payload []byte) error {
 
 	log.Print(result)
 	return nil
+}
+
+func GetProjectID() string {
+	url := "http://metadata.google.internal/computeMetadata/v1/project/numeric-project-id"
+	req, _ := http.NewRequest("GET", url, nil)
+	req.Header.Set("Metadata-Flavor", "Google")
+
+	res, err := http.DefaultClient.Do(req)
+
+	if err != nil {
+		fmt.Printf(`{"message": "Failed to retieve metadata", "severity": "warning"}`)
+		return "122203615305"
+	}
+
+	defer res.Body.Close()
+
+	body, _ := io.ReadAll(res.Body)
+	passed := fmt.Sprintf(string(body))
+
+	fmt.Printf(`{"message": "ProjectID %s", "severity": "info"}`, passed)
+	return passed
 }
